@@ -1,12 +1,18 @@
 /**
- * BMS 485 to CAN Converter for Deye Inverter (Lithium Mode 00 - Deye generic
- * CAN / Pylontech). Hardware: GD32F305 + ISO1050 (CAN) + CA-IS3080WX (RS485)
+ * BMS 485 to CAN Converter for Solis Inverter (Battery Option "Pylon LV" —
+ * Pylontech low-voltage CAN protocol). Hardware: GD32F305 + ISO1050 (CAN) +
+ * CA-IS3080WX (RS485)
  *
- * Frame set and layout follow "PCS CAN-Bus-protocol-DY-low-voltage V3.3" and
- * "PYLON low voltage Protocol CAN Bus v2.0.6": standard frames, 500 kbit/s,
- * cycle 1 s, BMS transmits 0x351/0x355/0x356/0x359/0x35C/0x35E.
- * IDs 0x300..0x30F are reserved for the PCS downlink (0x305 is the inverter
- * heartbeat) and must never be transmitted by the battery side.
+ * Frame set and layout follow "PYLON low voltage Protocol CAN Bus" as
+ * consumed by Solis S6-EH1P(3-10)K-L-PLUS with Battery Select = PYLON_LV:
+ * standard 11-bit frames, 500 kbit/s, cycle 1 s, BMS transmits
+ * 0x351/0x355/0x356/0x359/0x35C/0x35E. IDs 0x300..0x30F are reserved for
+ * the PCS downlink (0x305 is the inverter keepalive, all-zero payload) and
+ * must never be transmitted by the battery side.
+ *
+ * Solis COM1/COM2 CAN pinout: pin4 = CAN-H, pin5 = CAN-L. COM-Box PCS-CAN
+ * RJ45: pin8 = CANH, pin7 = CANL, pin1 = GND — straight-through RJ45 does
+ * NOT work, an adapter cable is required (GND must be connected).
  *
  * CAN bus speed: 500 kbit/s, measured manually on real hardware (BTR = 0x030A0000).
  * The 250 kbit/s value was never confirmed and is not a valid option.
@@ -160,7 +166,7 @@ static uint16_t modbus_crc16(const uint8_t *data, uint16_t len) {
 #define CAN_PROT_SYSTEM_ERROR  0x08
 
 // RS485 register units -> physical units. Confirm against the battery model.
-// reg1 current: 1 = BMS reports charge as positive (negated for Deye CAN),
+// reg1 current: 1 = BMS reports charge as positive (negated for Pylontech/Solis CAN),
 //               0 = BMS reports discharge as positive (passed through).
 #define BMS_CURRENT_CHARGE_IS_POSITIVE 1
 // reg19 temperature raw divisor: 1 = reg 0x13 holds whole C (dump 08.10.2026).
@@ -190,12 +196,12 @@ static uint16_t modbus_crc16(const uint8_t *data, uint16_t len) {
 #define PCS_RX_RCU RCU_GPIOD
 #define PCS_RX_PIN GPIO_PIN_2
 
-#define DEYE_CAN CAN0
-#define DEYE_CAN_RCU RCU_CAN0
-#define DEYE_CAN_GPIO_PORT GPIOB
-#define DEYE_CAN_GPIO_RCU RCU_GPIOB
-#define DEYE_CAN_RX_PIN GPIO_PIN_8
-#define DEYE_CAN_TX_PIN GPIO_PIN_9
+#define SOLIS_CAN CAN0
+#define SOLIS_CAN_RCU RCU_CAN0
+#define SOLIS_CAN_GPIO_PORT GPIOB
+#define SOLIS_CAN_GPIO_RCU RCU_GPIOB
+#define SOLIS_CAN_RX_PIN GPIO_PIN_8
+#define SOLIS_CAN_TX_PIN GPIO_PIN_9
 
 // LED assignment per PORT_MAPPING.md §4 (factory panel labels, 17.10.2026):
 //   LED5 (PB0)  = system running (program alive) — steady ON after init;
@@ -406,7 +412,8 @@ static void rs485_flush_rx(void) {
 //   are dropped, the inverter just times out).
 //   PRODUCTION KEEPS DIP2 OFF — 13.10 analysis: the inverter would read raw
 //   packs over RS485, bypassing our CCL stop-tap aggregation; this mode is
-//   research/diagnostics (DEYE_CAN_RS485_BASE.md §Q23, TODO §5.1).
+//   research/diagnostics only — the inverter would read raw pack data,
+//   bypassing our CCL stop-tap aggregation.
 #define DIP2_BRIDGE_MODE 0x02
 #define PCS_GAP_MS 5           // ~3.5 idle chars at 9600 (3.65 ms): Modbus frame gap
 #define PCS_RESP_FIRST_MS 300  // BMS must start answering within this
@@ -691,7 +698,7 @@ static bool bms_parse_response(uint8_t expected_addr) {
   if (uart_rx_buffer[0] != expected_addr || uart_rx_buffer[1] != 0x03)
     return false;
   // Byte count: our own window is 0x4E (39 regs, 83 B); a bridged inverter
-  // frame (Deye) asks 0x38 (28 regs, 61 B). Other windows (e.g. reg 0x50)
+  // frame asks 0x38 (28 regs, 61 B). Other windows (e.g. reg 0x50)
   // are not ours — they stay transparent and are never aggregated.
   uint16_t data_bytes = uart_rx_buffer[2];
   if (data_bytes != 0x4E && data_bytes != 0x38)
@@ -773,7 +780,7 @@ static bool bms_parse_response(uint8_t expected_addr) {
     sweep_protect_b0 |= CAN_PROT_CELL_UV;
   if ((reg_protect & 0x0300) || pack_t_max >= TEMP_DISCHARGE_MAX_C)
     sweep_protect_b0 |= CAN_PROT_OT;
-  // System-level UT protection stops both charge and discharge in Deye; trigger only if battery
+  // System-level UT protection stops both charge and discharge in the inverter; trigger only if battery
   // is under the physical discharge limit (-20°C) or BMS asserts protection (charge limit handled via CCL=0):
   if ((reg_protect & 0x0C00) || pack_t_min <= TEMP_DISCHARGE_MIN_C)
     sweep_protect_b0 |= CAN_PROT_UT;
@@ -1154,7 +1161,7 @@ static void bms_aggregate_data(void) {
     return;
 
   bms_voltage = agg_voltage_sum / (float)agg_count;
-  // Deye PCS CAN V3.3: 0x356 current is discharge positive, charge negative.
+  // Pylontech LV / Solis: 0x356 current is discharge positive, charge negative.
   bms_current = BMS_CURRENT_CHARGE_IS_POSITIVE ? -agg_current_sum
                                                : agg_current_sum;
   bms_soc = (uint8_t)(agg_soc_sum / agg_count);
@@ -1188,15 +1195,15 @@ static void bms_aggregate_data(void) {
 
 static void can_init_500k(void) {
   rcu_periph_clock_enable(RCU_AF);
-  rcu_periph_clock_enable(DEYE_CAN_GPIO_RCU);
-  rcu_periph_clock_enable(DEYE_CAN_RCU);
+  rcu_periph_clock_enable(SOLIS_CAN_GPIO_RCU);
+  rcu_periph_clock_enable(SOLIS_CAN_RCU);
   gpio_pin_remap_config(GPIO_CAN_PARTIAL_REMAP, ENABLE);
-  gpio_init(DEYE_CAN_GPIO_PORT, GPIO_MODE_IPU, GPIO_OSPEED_50MHZ,
-            DEYE_CAN_RX_PIN);
-  gpio_init(DEYE_CAN_GPIO_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ,
-            DEYE_CAN_TX_PIN);
+  gpio_init(SOLIS_CAN_GPIO_PORT, GPIO_MODE_IPU, GPIO_OSPEED_50MHZ,
+            SOLIS_CAN_RX_PIN);
+  gpio_init(SOLIS_CAN_GPIO_PORT, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ,
+            SOLIS_CAN_TX_PIN);
 
-  can_deinit(DEYE_CAN);
+  can_deinit(SOLIS_CAN);
   can_parameter_struct params;
   can_struct_para_init(CAN_INIT_STRUCT, &params);
   params.auto_bus_off_recovery = ENABLE;
@@ -1206,7 +1213,7 @@ static void can_init_500k(void) {
   params.time_segment_1 = CAN_BT_BS1_11TQ;
   params.time_segment_2 = CAN_BT_BS2_4TQ;
   params.prescaler = 1;
-  can_init(DEYE_CAN, &params);
+  can_init(SOLIS_CAN, &params);
 
   can_filter_parameter_struct filter;
   can_struct_para_init(CAN_FILTER_STRUCT, &filter);
@@ -1223,9 +1230,9 @@ static void can_init_500k(void) {
 }
 
 static bool can_mailbox_free(void) {
-  return (can_flag_get(DEYE_CAN, CAN_FLAG_TME0) == SET) ||
-         (can_flag_get(DEYE_CAN, CAN_FLAG_TME1) == SET) ||
-         (can_flag_get(DEYE_CAN, CAN_FLAG_TME2) == SET);
+  return (can_flag_get(SOLIS_CAN, CAN_FLAG_TME0) == SET) ||
+         (can_flag_get(SOLIS_CAN, CAN_FLAG_TME1) == SET) ||
+         (can_flag_get(SOLIS_CAN, CAN_FLAG_TME2) == SET);
 }
 
 static void send_can_std(uint32_t id, const uint8_t *data, uint8_t len) {
@@ -1244,12 +1251,12 @@ static void send_can_std(uint32_t id, const uint8_t *data, uint8_t len) {
   for (uint8_t i = 0; i < len; i++)
     tx_msg.tx_data[i] = data[i];
 
-  uint8_t mbox = can_message_transmit(DEYE_CAN, &tx_msg);
+  uint8_t mbox = can_message_transmit(SOLIS_CAN, &tx_msg);
   if (mbox == CAN_NOMAILBOX)
     return;
 
   uint32_t tx_start = millis();
-  while (can_transmit_states(DEYE_CAN, mbox) == CAN_TRANSMIT_PENDING) {
+  while (can_transmit_states(SOLIS_CAN, mbox) == CAN_TRANSMIT_PENDING) {
     if (millis() - tx_start >= 3)
       return;
   }
