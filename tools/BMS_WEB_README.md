@@ -189,7 +189,8 @@ BMS web monitor: http://127.0.0.1:8080  [/dev/cu.usbserial-A5069RR4 @ 9600]  add
 
 - `tools/bms_web.py` — сам додаток;
 - `tools/rs485_sniff.py` — пасивний сніфер шини (для порівняння/звірки);
-- `DEYE_CAN_RS485_BASE.md` — протоколи, мапи, «Додано 13.10» (батарейний
+- `SOLIS_PROTOCOL_NOTES.md` / історичний `DEYE_CAN_RS485_BASE.md` (репозиторій
+  COMBOX_V1) — протоколи, мапи, «Додано 13.10» (батарейний
   Modbus 15-16S), «Додано 21.10» (r19 = напрям струму) і **«Додано 22.10»
   (звірка PDF V01.01: одиниці, hi-first, 0x4000 = Reverse, DIP)**;
 - `IDEAS_BRAINSTORM.md` — довідка по Modbus-командах і знахідки BMS_TOOLS;

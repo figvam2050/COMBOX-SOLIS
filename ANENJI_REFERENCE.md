@@ -17,7 +17,7 @@ OEM у PowMr, Y&H, Anern. Гіпотеза «Voltronic PI30/PI18» **відки�
 | S3 | `Modbus register address of integrated inverter controller V1.3` (github jblance/mpp-solar, 6 с.) | повна мапа регістрів V1.3 | звірено з PDF 14.10.2026 |
 | S4 | SRNE Modbus protocol **V1.7** (scribd 593797158) | пласка мапа `0x0100` (стан/Vbat/Ibat/SOC/PV/AC/temperature) | scribd закритий JS-челенджем; цифри зі зведення користувача — **потребують звірки на апараті** |
 | S5 | `SRNE HF Series User Manual` (github krimsonkla/srne_ble_modbus) | LCD-коди аварій 01–29, захисти, §5.2 RS485/CAN-порт | звірено з MD 14.10.2026 |
-| S6 | Попередні KB-розділи `DEYE_CAN_RS485_BASE.md` (13.10/14.10.2026), `ERRORS_REFERENCE.md` §5 | контекст проєкту, застереження про бренд-специфічність | — |
+| S6 | Попередні KB-розділи `DEYE_CAN_RS485_BASE.md` (13.10/14.10.2026; репозиторій COMBOX_V1), `ERRORS_REFERENCE.md` §5 | контекст проєкту, застереження про бренд-специфічність | — |
 
 ## 1. Батарейний канал (RS485 BMS) — Pylon, головне для COM-Box
 
@@ -41,7 +41,8 @@ OEM у PowMr, Y&H, Anern. Гіпотеза «Voltronic PI30/PI18» **відки�
   SW2–SW4 = групова адреса; головний модуль (перший) несе адресу групи.
 - **Висновок для проєкту:** канал релевантний для **Q23** (COM-Box як
   Pylon-батарея/система для RS485-only інвертора, варіант «proxy»;
-  `DEYE_CAN_RS485_BASE.md`, розділ від 13.10.2026). Anenji + Vision напряму
+  `DEYE_CAN_RS485_BASE.md`, розділ від 13.10.2026 — репозиторій COMBOX_V1).
+  Anenji + Vision напряму
   теж має працювати (Pylon з обох боків) — COM-Box для базового зв'язку не
   обов'язковий, його цінність = агрегація лімітів, fail-closed, захист мережі.
 

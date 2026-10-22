@@ -14,8 +14,10 @@
 Див. також:
 * [`../README.md`](../README.md) — основна прошивка COM-Box; §2 містить команди
   збірки/прошивки і паралельний RS485-сніфер батарейної шини;
-* [`../DEYE_CAN_RS485_BASE.md`](../DEYE_CAN_RS485_BASE.md) — база знань CAN/RS485
-  Deye (декод кадрів 0x351…0x35E/0x305 нижче відповідає її розділам по CAN);
+* [`../SOLIS_PROTOCOL_NOTES.md`](../SOLIS_PROTOCOL_NOTES.md) — база знань CAN/RS485
+  (Pylontech LV CAN для Solis; декод кадрів 0x351…0x35E/0x305 нижче відповідає
+  її розділам по CAN; історична база Deye — `DEYE_CAN_RS485_BASE.md`, репозиторій
+  COMBOX_V1);
 * [`../PORT_MAPPING.md`](../PORT_MAPPING.md) — незмінний еталон фізичних пінів
   (MCU ↔ CAN/RS485: PB8/PB9 = PCS-CAN, `chmod 444`);
 * [`../tools/rs485_sniff.py`](../tools/rs485_sniff.py) — пасивний RS485-сніфер
