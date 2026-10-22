@@ -104,8 +104,6 @@
 | | [`can_sniffer/README.md`](can_sniffer/README.md) | CAN-сніфер для ESP32 (режим ACK) та Arduino Nano для тестування COM-Box без інвертора |
 | | [`tools/rs485_sniff.py`](tools/rs485_sniff.py) | Пасивний сніфер батарейної шини Modbus RTU з авто-декодом полів Vision |
 | | [`tools/verify_dump.py`](tools/verify_dump.py) | Регресійні тести парсера BMS на реальних фікстурах дампів (`--selftest`, `--queries`) |
-| | [`HUAWEI_REFERENCE.md`](HUAWEI_REFERENCE.md) | Дослідження протоколу батарей Huawei ESM-48100 (довідковий матеріал на майбутнє) |
-| | [`ANENJI_REFERENCE.md`](ANENJI_REFERENCE.md) | Дослідження протоколів інвертора Anenji/SRNE (довідковий матеріал на майбутнє) |
 
 ---
 
@@ -159,7 +157,8 @@ python3 tools/verify_dump.py - "01 03 4E ... 7A CC"   # кадр із рядка
 Пасивний (read-only) сніфер Modbus RTU на шині батарей: декодує опитування інвертора
 (`FC03 0x00 qty=28`, `FC03 0x50 qty=2`) і нашого box (`qty=0x27`), мапу Vision
 (V/I/комірки/t/SOC/SOH/r17..r26), модельний ASCII; пише у
-`deye/rs485_sniff_<timestamp>.log` (формат рядків — як у логу 09.10.2026).
+`solis/rs485_sniff_<timestamp>.log` (історичні логи етапу Deye — у `deye/`;
+формат рядків — як у логу 09.10.2026).
 
 ```bash
 python3 tools/rs485_sniff.py --list                       # порти

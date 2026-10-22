@@ -16,6 +16,9 @@ USER_MANUAL*.md
 IDEAS_BRAINSTORM.md
 USER_MANUAL*.html
 USER_MANUAL*.pdf
+
+# --- Локальні PDF/фото: мануали обладнання, скани (не для репозиторію) ---
+# Наприклад: Solis_Manual_S6-EH1P(3-10)K-L-PLUS...pdf
 *.pdf
 IMG*.*
 *.jpeg
@@ -46,7 +49,10 @@ desktop.ini
 __pycache__/
 *.pyc
 
-# --- Локальні папки з документацією/прошивками (не для репозиторію) ---
+# --- Локальні робочі папки (не для репозиторію) ---
+# solis/  — нові логи/матеріали етапу Solis (дефолтний вивід tools/rs485_sniff.py)
+# deye/   — історичні логи/документація етапу Deye (COMBOX_V1), уже накопичені локально
+solis/
 deye/
 120-200177-01(GD305COMBOX_V102_20230904)/
 can_sniffer/backups/

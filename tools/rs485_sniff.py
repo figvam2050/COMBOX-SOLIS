@@ -3,9 +3,10 @@
 
 Captures the battery RS485 bus (read-only tap, 9600 8N1 by default),
 verifies CRC16 on every frame, decodes requests and responses of both
-masters: the Deye inverter (FC03 0x00 qty=28 + 0x0050 qty=2) and the
-COM-Box (FC03 0x00 qty=0x27). Output format matches
-deye/rs485_sniff_inverter_battery_2026-10-09.log.
+masters: the inverter (historically Deye: FC03 0x00 qty=28 +
+0x0050 qty=2; Solis window — verify) and the COM-Box
+(FC03 0x00 qty=0x27). Output format matches the historical capture
+deye/rs485_sniff_inverter_battery_2026-10-09.log (format unchanged).
 
 Usage:
   python3 tools/rs485_sniff.py --list
@@ -241,7 +242,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", help="serial port, e.g. /dev/tty.usbserial-*")
     ap.add_argument("--baud", type=int, default=9600)
-    ap.add_argument("--out", help="log file (default deye/rs485_sniff_<timestamp>.log)")
+    ap.add_argument("--out", help="log file (default solis/rs485_sniff_<timestamp>.log)")
     ap.add_argument("--duration", type=float,
                     help="stop cleanly after N seconds (writes the log on exit)")
     ap.add_argument("--list", action="store_true", help="list serial ports and exit")
@@ -264,7 +265,7 @@ def main() -> int:
             return 1
         return 0
 
-    out_path = args.out or f"deye/rs485_sniff_{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
+    out_path = args.out or f"solis/rs485_sniff_{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
     out_lines = []
     header = [
         f"# RS485 sniff (passive)  port={args.port} baud={args.baud} 8N1",
@@ -345,6 +346,8 @@ def main() -> int:
             print(f"# dropped bursts: {dropped_bursts}")
         if dropped_dups:
             print(f"# dropped duplicate frames: {dropped_dups}")
+        from pathlib import Path
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "w") as fh:
             fh.write("\n".join(header + out_lines) + "\n")
         print(f"# written: {out_path} ({len(out_lines)} frames)")
