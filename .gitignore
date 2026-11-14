@@ -27,3 +27,6 @@ compiled_firmware/*
 !generate_hex.py
 !src/
 !lib/
+!docs/
+!docs/images/
+!docs/images/*.jpg
