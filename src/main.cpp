@@ -76,7 +76,8 @@ static uint16_t modbus_crc16(const uint8_t *data, uint16_t len) {
 #define CHARGE_CURRENT_LIMIT_DEFAULT 0
 #define DISCHARGE_CURRENT_LIMIT_DEFAULT 0
 
-#define CHARGE_VOLTAGE_LIMIT_STATIC 532 // 53.2 V (3.546 V/cell * 15): Victron/Pylontech 15S profile
+#define CHARGE_VOLTAGE_LIMIT_STATIC 540 // 54.0 V (3.600 V/cell * 15): full charge profile (DIP1 OFF, DIP2 OFF)
+#define CHARGE_VOLTAGE_LIMIT_532 532    // 53.2 V (3.546 V/cell * 15): Victron/Pylontech 15S profile (DIP2 ON)
 #define CHARGE_VOLTAGE_LIMIT_DIP90 518
 // Per-pack charge current limit, selected by DIP5 (see DIP_CHARGE_CURRENT_50A):
 // OFF = 40 A (standard), ON = 15 A (limited/gentle charge: 2 packs=30A, 3=45A, 4=60A).
@@ -99,6 +100,7 @@ static uint16_t modbus_crc16(const uint8_t *data, uint16_t len) {
 // Bit moved from SW4 on 17.10.2026 (convenient end switch, silkscreen "SW1"
 // near the PCS-485/CAN jacks); stock SW1 protocol meaning (PYLON) unused.
 #define DIP_PROFILE_CODE_90 1
+#define DIP_VOLTAGE_532 0x02
 // DIP5 (SW5, weight 16, PC6) selects the per-pack charge current limit:
 // OFF = 40 A, ON = 50 A. Orthogonal to the SW1 voltage profile.
 #define DIP_CHARGE_CURRENT_50A 0x10
@@ -1441,7 +1443,9 @@ static void dip_charge_profile_apply(uint8_t code) {
     profile_charge_stop_mv = CELL_CHARGE_STOP_MV_DIP90;
     profile_charge_reenable_mv = CELL_CHARGE_REENABLE_MV_DIP90;
   } else {
-    profile_charge_voltage_limit = CHARGE_VOLTAGE_LIMIT_STATIC;
+    profile_charge_voltage_limit = (code & DIP_VOLTAGE_532)
+                                       ? CHARGE_VOLTAGE_LIMIT_532
+                                       : CHARGE_VOLTAGE_LIMIT_STATIC;
     profile_taper_start_mv = CELL_TAPER_START_MV;
     profile_charge_stop_mv = CELL_CHARGE_STOP_MV;
     profile_charge_reenable_mv = CELL_CHARGE_REENABLE_MV;
