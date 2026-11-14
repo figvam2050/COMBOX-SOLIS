@@ -18,3 +18,12 @@
 compiled_firmware/*
 !compiled_firmware/firmware.bin
 !compiled_firmware/firmware.hex
+
+# 5. Дозволити вихідний код та конфігурацію PlatformIO для VS Code
+!LICENSE
+!platformio.ini
+!GD32F305RC_COMBOX.ld
+!GD32F305RC_COMBOX_APP.ld
+!generate_hex.py
+!src/
+!lib/
