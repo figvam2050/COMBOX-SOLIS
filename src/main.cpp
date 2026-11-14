@@ -286,6 +286,7 @@ static uint8_t sweep_protect_b0 = 0;
 static uint8_t sweep_protect_b1 = 0;
 static uint8_t sweep_alarm_b2 = 0;
 static uint8_t sweep_alarm_b3 = 0;
+static uint8_t sweep_cell_ov_count = 0;
 
 // Multi-pack debounce (Q21): tolerate 10-20% RS485 packet loss without flapping limits
 static uint8_t pack_miss_count[16] = {0};
@@ -789,8 +790,10 @@ static bool bms_parse_response(uint8_t expected_addr) {
   // Cross-validate with physical measurements to reject transient Boot Latch flags (Q17):
   // Confirmation uses physical threshold CELL_PHYSICAL_OV_CONFIRM_MV (3600 mV), NOT calc_charge_stop_mv,
   // so that activating the 90% software taper profile never generates false emergency cell OV alarms:
-  if ((reg_protect & 0x0002) && agg_max_cell_mv >= CELL_PHYSICAL_OV_CONFIRM_MV)
-    sweep_protect_b0 |= (CAN_PROT_CELL_OV | CAN_PROT_PACK_OV);
+  if ((reg_protect & 0x0002) && agg_max_cell_mv >= CELL_PHYSICAL_OV_CONFIRM_MV) {
+    if (sweep_cell_ov_count < 16)
+      sweep_cell_ov_count++;
+  }
   // Cell UV Protect (0x359 b0): triggers proactively at <= 2750 mV (ahead of BMS 2500 mV)
   // or if confirmed by BMS hardware alarm:
   if (agg_min_cell_mv <= CELL_DISCHARGE_STOP_MV ||
@@ -1252,13 +1255,22 @@ static void bms_aggregate_data(void) {
   sweep_alarm_b2 = 0;
   sweep_alarm_b3 = 0;
 
+  uint8_t ov_packs = sweep_cell_ov_count;
+  sweep_cell_ov_count = 0;
+
   uint8_t effective_packs = (active_pack_count > 0) ? active_pack_count : agg_count;
   bms_pack_count = effective_packs;
+  uint8_t healthy_charge_packs =
+      (effective_packs > ov_packs) ? (effective_packs - ov_packs) : 0;
+  if (healthy_charge_packs == 0 && ov_packs > 0)
+    can_protect_b0 |= (CAN_PROT_CELL_OV | CAN_PROT_PACK_OV);
 
   balance_update(effective_packs);
   charge_voltage_limit = bal_session_active ? CHARGE_VOLTAGE_LIMIT_STATIC
                                             : profile_charge_voltage_limit;
-  charge_current_limit = calculate_charge_limit(effective_packs);
+  charge_current_limit = (healthy_charge_packs > 0)
+                             ? calculate_charge_limit(healthy_charge_packs)
+                             : 0;
   discharge_current_limit = calculate_discharge_limit(effective_packs);
 
   // Set data valid now that fresh aggregated values are computed
