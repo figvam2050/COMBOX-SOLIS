@@ -429,7 +429,7 @@ static void rs485_flush_rx(void) {
 //   packs over RS485, bypassing our CCL stop-tap aggregation; this mode is
 //   research/diagnostics only — the inverter would read raw pack data,
 //   bypassing our CCL stop-tap aggregation.
-#define DIP2_BRIDGE_MODE 0x02
+#define DIP3_BRIDGE_MODE 0x04
 #define PCS_GAP_MS 5           // ~3.5 idle chars at 9600 (3.65 ms): Modbus frame gap
 #define PCS_RESP_FIRST_MS 300  // BMS must start answering within this
 #define PCS_RESP_MAX_MS 1000   // whole bridged response hard cap
@@ -652,7 +652,7 @@ static bool pcs_bridge_step(uint32_t now) {
 // DIP2 mode switch; deferred while a bridge transaction is in flight
 // (retried from the 250 ms DIP poll until the bridge goes idle).
 static void pcs_mode_apply(uint8_t code) {
-  bool bridge = (code & DIP2_BRIDGE_MODE) != 0;
+  bool bridge = (code & DIP3_BRIDGE_MODE) != 0;
   if (bridge == pcs_bridge_mode)
     return;
   if (br_state != BR_IDLE || inv_frame_n != 0)
